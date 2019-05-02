@@ -16,7 +16,7 @@ function generate() {
   local fps
   duration=$(ffprobe -v error -select_streams v:0 -show_entries stream=duration -of default=noprint_wrappers=1:nokey=1 "$2")
   fps=$(ffprobe -v error -select_streams v:0 -show_entries stream=r_frame_rate -of default=noprint_wrappers=1:nokey=1 "$2" | bc -l | xargs printf "%.0f")
-  seq 0 "$duration" | parallel frame "$1" "\"$2\"" "\"$3\"" "$4" "\"$5\"" "$fps" "{1}"
+  seq 0 "$duration" | /usr/bin/parallel frame "$1" "\"$2\"" "\"$3\"" "$4" "\"$5\"" "$fps" "{1}"
 }
 
 # $1: filter, $2: input file, $3 output path, $4 output type, $5: output args, $6 fps, $7: second to detect
@@ -24,7 +24,8 @@ function frame() {
   temp="/tmp/frames/$(basename "$3")/$7"
   mkdir -p "$temp"
 
-  outdir="$3/frames"
+  # Create specified output path or otherwise use "frames"
+  [ "$3" == "." ] && outdir="frames" || outdir="$3"
   mkdir -p "$outdir"
 
   # Generate all the frames for this second
@@ -43,7 +44,7 @@ function frame() {
 # $1: destination, $2: input
 function filter_edges() {
   # Find edges
-  parallel 'convert {1} -colorspace Gray -edge 2 {1}.edge.png; identify -format "%[mean]+%[standard-deviation]" {1}.edge.png | { read a; echo "$a" | bc; } | xargs printf "%s,{1}\n"' ::: "$2" | sort -nr | head -n 1 | tr "," "\n" | tail -n 1 | tr -d "'" | { read -r f; mv "$f" "$1"; }
+  /usr/bin/parallel 'convert {1} -colorspace Gray -edge 2 {1}.edge.png; identify -format "%[mean]+%[standard-deviation]" {1}.edge.png | { read a; echo "$a" | bc; } | xargs printf "%s,{1}\n"' ::: "$2" | sort -nr | head -n 1 | tr "," "\n" | tail -n 1 | tr -d "'" | { read -r f; mv "$f" "$1"; }
 }
 
 # $1: destination, $2: input
